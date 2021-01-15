@@ -3,26 +3,34 @@ const fetch = require("node-fetch");
 
 Router.route("/").get(async (req, res, next) => {
   let { base, currency } = req.query;
+  let endpoint;
 
   if (base !== undefined) base = base.toUpperCase();
 
+  if (currency !== undefined) {
+    currency = currency
+      .split(",")
+      .map((cur) => cur.toUpperCase())
+      .toString();
+  }
   try {
-    const endpoint = `https://api.exchangeratesapi.io/latest?base=${base}&currency=${currency}`;
-    const response = await (await fetch(endpoint)).json();
-    let rates = {};
-
-    if (currency !== undefined) {
-      currency = currency.split(",").map((cur) => cur.toUpperCase());
-      currency.forEach((cur) => (rates[cur] = response.rates[cur]));
-    } else{
-      rates = {...response.rates}
+    if (currency == undefined && base == undefined) {
+      endpoint = `https://api.exchangeratesapi.io/latest`;
+    } else if (currency == undefined && base !== undefined) {
+      endpoint = `https://api.exchangeratesapi.io/latest?base=${base}`;
+    } else if (currency !== undefined && base == undefined) {
+      endpoint = `https://api.exchangeratesapi.io/latest?symbols=${currency}`;
+    } else {
+      endpoint = `https://api.exchangeratesapi.io/latest?base=${base}&symbols=${currency}`;
     }
+    const response = await (await fetch(endpoint)).json();
 
     res.json({
       results: {
         base: response.base,
         date: response.date,
-        rates,
+        rates: response.rates,
+        error: response.error,
       },
     });
   } catch (error) {
